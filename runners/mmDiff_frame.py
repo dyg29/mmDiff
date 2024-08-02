@@ -95,7 +95,7 @@ class mmDiff(object):
                                   size=(2 // 2 + 1,)).cuda(), torch.rand(2, 17, 64).cuda(),  torch.rand(2, 4, 5000, 6).cuda(), None))
             print(flops.by_module())
 
-          
+
 
 
     # create diffusion model
@@ -119,10 +119,10 @@ class mmDiff(object):
         #                     [2, 4], [11, 10], [11, 9],
         #                     [0, 9], [0, 10], [10, 8], [8,6],
         #                     [7, 9], [7, 5], [0, 11]], dtype=torch.long)
-        adj = adj_mx_from_edges(num_pts=17, edges=edges, sparse=False)
+        # adj = adj_mx_from_edges(num_pts=17, edges=edges, sparse=False)
 
         self.model_diff = GCNdiff(adj.cuda(), config).cuda()
-        self.model_diff = torch.nn.DataParallel(self.model_diff)
+        self.model_diff = torch.nn.DataParallel(self.model_diff)  # for multi-gpus
         
         # load pretrained model
         if model_limb_path:
@@ -173,7 +173,7 @@ class mmDiff(object):
         #                     [2, 4], [11, 10], [11, 9],
         #                     [0, 9], [0, 10], [10, 8], [8,6],
         #                     [7, 9], [7, 5], [0, 11]], dtype=torch.long)
-        adj = adj_mx_from_edges(num_pts=17, edges=edges, sparse=False)
+        # adj = adj_mx_from_edges(num_pts=17, edges=edges, sparse=False)
         self.model_pose = GCNpose(adj.cuda(), config).cuda()
         self.model_pose = torch.nn.DataParallel(self.model_pose)
         
@@ -229,6 +229,7 @@ class mmDiff(object):
         
         optimizer = get_optimizer(self.config, self.model_diff.parameters())
         
+        # Exponential Moving Average, training helper
         if self.config.model.ema:
             ema_helper = EMAHelper(mu=self.config.model.ema_rate)
             ema_helper.register(self.model_diff)
@@ -247,6 +248,7 @@ class mmDiff(object):
             torch.set_grad_enabled(True)
             self.model_diff.train()
             
+            # class AverageMeter from common.utils
             epoch_loss_diff = AverageMeter()
 
             for i, (targets_uvxyz, targets_noise_scale, input_feat, targets_3d_pred, _, _, radar, limb_len_gt) in enumerate(self.train_loader):
@@ -469,6 +471,7 @@ class mmDiff(object):
                 .format(batch=i + 1, size=len(self.valid_loader), data=data_time, e1=epoch_loss_3d_pos.avg,\
                     e2=epoch_loss_3d_pos_procrustes.avg, e3=limb_loss.mean(dim=0)))
         
+        # print_error from common.utils
         p1, p2 = print_error(None, action_error_sum, is_train)
 
 
