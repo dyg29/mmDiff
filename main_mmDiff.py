@@ -108,6 +108,7 @@ def parse_args_and_config():
         else:
             os.makedirs(args.log_path)
 
+        # record new configure file
         with open(os.path.join(args.log_path, "config.yml"), "w") as f:
             yaml.dump(new_config, f, default_flow_style=False)
 
